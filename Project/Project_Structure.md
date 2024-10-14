@@ -29,6 +29,7 @@ Integration of a valid squat counter incl. visualization (6 %)
 Create a sound every time a valid squat was done & include a check Box for the feature in your visualization (6%)
 Integration of a knee angle graph in the visualisation (always visualize the last X seconds) (11%)
 Integration of handle tracking incl. visualization of squat hight (6%)
+Integration of handle tracking incl. visualization of squat hight (6%)
 Integration of a handle position graph in the visualisation (always visualize the last Y seconds) (11%)
 
 
