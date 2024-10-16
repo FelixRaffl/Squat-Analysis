@@ -3,7 +3,8 @@ from tkinter import ttk
 import cv2
 from PIL import Image, ImageTk
 import numpy as np
-from camera import Camera  # Assuming Camera is your class handling video capture
+from camera import Camera
+import marker_detection
 
 class SquatApp:
     def __init__(self):
@@ -16,10 +17,10 @@ class SquatApp:
         self.show_placeholder()
 
         self.toggle_cam_button = ttk.Button(self.root, text="Toggle Camera", command=self.toggle_camera)
-        self.toggle_cam_button.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        self.toggle_cam_button.grid(row=0, column=0, padx=0, pady=0, sticky="w")
 
         self.start_measurement = ttk.Button(self.root, text="Start measurement", command=self.start_measurement)
-        self.start_measurement.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        self.start_measurement.grid(row=0, column=1, padx=0, pady=0, sticky="w")
 
         self.Camera_On = False
         self.camera = Camera()
@@ -62,7 +63,12 @@ class SquatApp:
             self.root.after(10, self.update_cam)
 
     def start_measurement(self):
-        return
+        self.camera.startcam()
+        frame = self.camera.get_frame()
+        newframe,centerpoints = marker_detection.aruco_detection(frame)
+        print(centerpoints)
+        cv2.imshow("frame",newframe)
+        self.camera.releasecam()
         
     def run(self):
         self.root.mainloop()

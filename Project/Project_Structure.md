@@ -1,25 +1,4 @@
-This is a possible project structure for the squat analysis project:
-
-main.py is the main python program that should be executed when you want to run the GUI and start some measurements
-
-The process of the measurment is focusing on the fundamental parts of the project. 
-
-Requirements for the System (Must Haves):
-+ Should be able to measure femur angle with respect to the floor (40 %)
-+ Should be able to measure knee angle (10 %)
-+ Visualize the two angels in a dashboard (10 %)
-
-
-To be able to fulfill the given requirements there are several steps necessary. Thinkin of the given requirements we also have to think about the typical process of such a measurement. The scenario is quite simple:
-
-An athlete comes to the sqaut cage for a 1RM test. A soon as the athlete is in position with the handle on his/her shoulders the measurement should start. This can be done by running the code, or we initialize the measurement by clicking a start button in our GUI. Let's go with the minimal approach, as we are only looking at the must haves now, not the extended and optional requirements. If we run the program then, the next step would be a countinuous measurement of the ArUco Codes within the current frame, and pasting the positional information in some sort of datatype. How does this continuous measurement work from a process point of view.
-
-It has to follow a certain loop:
-
-+ Get the current frame from the camera
-+ Find the marker (ArUco Codes) within the current frame
-+ Calculate the knee and femur angle from the marker (ArUco Codes) position
-+ Update the GUI
+cha
 
 This is the minimal software structure we would expect. 
 
