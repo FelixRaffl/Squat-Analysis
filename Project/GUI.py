@@ -66,9 +66,12 @@ class SquatApp:
         self.camera.startcam()
         frame = self.camera.get_frame()
         newframe,centerpoints = marker_detection.aruco_detection(frame)
-        newframe2 = marker_detection.calculate_and_draw_angle(newframe,centerpoints)
-        cv2.imshow("frame",newframe2)
+        newframe2 = marker_detection.calculate_knee_angle(newframe,centerpoints)
+        newframe3 = marker_detection.calculate_femur_angle(newframe2,centerpoints)
+        cv2.imshow("frame",newframe3)
         self.camera.releasecam()
+        self.root.after(10, self.start_measurement)
+
         
     def run(self):
         self.root.mainloop()

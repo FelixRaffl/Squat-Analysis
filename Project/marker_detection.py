@@ -1,12 +1,38 @@
 import cv2
 import numpy as np
 
-def calculate_femur_angle(corners):
-    # Dummy calculation of femur angle based on marker positions
-    # Replace this with real angle calculations using your ArUco marker positions
-    return np.random.uniform(60, 90)  # Random angle for demonstration
+def calculate_femur_angle(frame,centerpoints):
+    x1, y1 = centerpoints[0][1], centerpoints[0][2]  # Point 1 (ID 1)
+    x2, y2 = centerpoints[1][1], centerpoints[1][2]  # Point 2 (ID 12)
 
-def calculate_and_draw_angle(frame, centerpoints):
+    vector_1_to_2 = np.array([x2 - x1, y2 - y1])
+    height, width, channels = frame.shape
+
+    horizontal_vector = np.array([0, width])
+
+    # Calculate the dot product between the vector and the horizontal vector
+    dot_product = np.dot(vector_1_to_2, horizontal_vector)
+
+    # Calculate the magnitudes of the vectors
+    magnitude_1_to_2 = np.linalg.norm(vector_1_to_2)
+    magnitude_horizontal = np.linalg.norm(horizontal_vector)
+
+    # Compute the angle in radians between the two vectors
+    angle_radians = np.arccos(dot_product / (magnitude_1_to_2 * magnitude_horizontal))
+
+    # Convert the angle to degrees
+    angle_degrees = np.degrees(angle_radians)
+
+    # Draw a line between the center points for visualization
+    cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Line from point 1 to point 2
+
+    # Display the calculated angle on the image near point 2
+    angle_text = f"{int(angle_degrees)} degrees"
+    cv2.putText(frame, angle_text, (x2, y2 - 20), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+    return frame
+    
+
+def calculate_knee_angle(frame, centerpoints):
         x1, y1 = centerpoints[0][1], centerpoints[0][2]
         x2, y2 = centerpoints[1][1], centerpoints[1][2]
         x3, y3 = centerpoints[2][1], centerpoints[2][2]
