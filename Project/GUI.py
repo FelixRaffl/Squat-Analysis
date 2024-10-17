@@ -66,8 +66,8 @@ class SquatApp:
         self.camera.startcam()
         frame = self.camera.get_frame()
         newframe,centerpoints = marker_detection.aruco_detection(frame)
-        print(centerpoints)
-        cv2.imshow("frame",newframe)
+        newframe2 = marker_detection.calculate_and_draw_angle(newframe,centerpoints)
+        cv2.imshow("frame",newframe2)
         self.camera.releasecam()
         
     def run(self):
