@@ -6,73 +6,64 @@ import numpy as np
 from camera import Camera
 import marker_detection
 
-class SquatApp:
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("Squat Analysis")
-        self.root.geometry("800x600")  # Set main window size
-        
-        self.video_label = ttk.Label(self.root)
-        self.video_label.grid(row=2, column=0, padx=10, pady=10)  # Camera feed in the top left corner
-        self.show_placeholder()
+# Create the root window
+root = tk.Tk()
+root.title("Squat Analysis")
+root.geometry("800x600")  # Set main window size
 
-        self.toggle_cam_button = ttk.Button(self.root, text="Toggle Camera", command=self.toggle_camera)
-        self.toggle_cam_button.grid(row=0, column=0, padx=0, pady=0, sticky="w")
+# Placeholder video label
+video_label = ttk.Label(root)
+video_label.grid(row=2, column=0, padx=10, pady=10)  # Camera feed in the top left corner
 
-        self.start_measurement = ttk.Button(self.root, text="Start measurement", command=self.start_measurement)
-        self.start_measurement.grid(row=0, column=1, padx=0, pady=0, sticky="w")
+Camera_On = False
+camera = Camera()
 
-        self.Camera_On = False
-        self.camera = Camera()
-
-    def show_placeholder(self):
-        """Displays a gray placeholder in the video label area before the camera starts."""
+live_frame = 0
+def live_window():
+    if Camera_On == False:
         gray_frame = np.zeros((480, 640, 3), dtype=np.uint8)  # 640x480 gray image
         gray_frame[:] = (169, 169, 169)  # Fill with a gray color (RGB 169, 169, 169)
         img = Image.fromarray(gray_frame)
         imgtk = ImageTk.PhotoImage(image=img)
 
-        self.video_label.imgtk = imgtk
-        self.video_label.configure(image=imgtk)
+        video_label.imgtk = imgtk
+        video_label.configure(image=imgtk)
+    else: 
+        cv_image = cv2.cvtColor(live_frame, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(cv_image)
+        imgtk = ImageTk.PhotoImage(image=img)
 
-    def toggle_camera(self):
-        if self.Camera_On == False:
-            self.camera.startcam()
-            self.Camera_On = True
-        else:
-            self.camera.releasecam()
-            self.Camera_On = False
-            self.show_placeholder()  # Reset to gray box when measurement stops
-
-        self.update_cam()  # Start updating the measurements
-
-    def update_cam(self):
-        if self.Camera_On:
-            frame = self.camera.get_frame()
-            if frame is not None:  # Ensure a frame was captured
-                # Convert the frame to an image suitable for Tkinter
-                cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                img = Image.fromarray(cv_image)
-                imgtk = ImageTk.PhotoImage(image=img)
-
-                # Update the label with the new frame
-                self.video_label.imgtk = imgtk
-                self.video_label.configure(image=imgtk)
-
-            # Schedule the next frame update (in milliseconds)
-            self.root.after(10, self.update_cam)
-
-    def start_measurement(self):
-        self.camera.startcam()
-        frame = self.camera.get_frame()
-        newframe,centerpoints = marker_detection.aruco_detection(frame)
-        newframe2 = marker_detection.calculate_knee_angle(newframe,centerpoints)
-        newframe3 = marker_detection.calculate_femur_angle(newframe2,centerpoints)
-        cv2.imshow("frame",newframe3)
-        self.camera.releasecam()
-        self.root.after(10, self.start_measurement)
-
+        # Update the label with the new frame
+        video_label.imgtk = imgtk
+        video_label.configure(image=imgtk)
         
-    def run(self):
-        self.root.mainloop()
+live_window()
 
+
+def toggle_camera():
+    if not Camera_On:
+        camera.startcam()
+        Camera_On = True
+    else:
+        camera.releasecam()
+        Camera_On = False
+
+def start_measurement():
+    camera.startcam()
+    frame = camera.get_frame()
+    if frame is not None:
+        newframe, centerpoints = marker_detection.aruco_detection(frame)
+        newframe2 = marker_detection.calculate_knee_angle(newframe, centerpoints)
+        newframe3 = marker_detection.calculate_femur_angle(newframe2, centerpoints)
+        cv2.imshow("frame", newframe3)
+    camera.releasecam()
+
+# Buttons for toggling the camera and starting measurement
+toggle_cam_button = ttk.Button(root, text="Toggle Camera", command=toggle_camera)
+toggle_cam_button.grid(row=0, column=0, padx=0, pady=0, sticky="w")
+
+start_measurement_button = ttk.Button(root, text="Start measurement", command=start_measurement)
+start_measurement_button.grid(row=0, column=1, padx=0, pady=0, sticky="w")
+
+# Run the main loop
+root.mainloop()
