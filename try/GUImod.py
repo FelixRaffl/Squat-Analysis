@@ -85,7 +85,9 @@ class GUI:
                 self.label.config(image=frame_image)
                 self.label.image = frame_image
         elif self.measurement_mode:
-            frame = self.measurement_module.create_measurement_frame(self.camera_module.get_frame())
+            frame,femurangle,kneeangle = self.measurement_module.create_measurement_frame(self.camera_module.get_frame())
+            squat_count = self.measurement_module.squat_counter(femurangle,0,50)
+            print(squat_count)
             if frame is not None:
                 frame_image = ImageTk.PhotoImage(image=Image.fromarray(frame))
                 self.label.config(image=frame_image)

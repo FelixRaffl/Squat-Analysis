@@ -1,6 +1,11 @@
 from PIL import Image, ImageDraw, ImageTk
 import cv2,numpy as np
+import winsound
+
+
 class MeasurementModule:
+    def __init__(self):
+        self.is_squating = None # Instance variable for the person's name
     def calculate_knee_angle(self,frame, centerpoints):
         if len(centerpoints) < 3:
             return frame, None  # Return the frame unchanged and indicate no angle
@@ -82,6 +87,17 @@ class MeasurementModule:
                 cv2.circle(frame, (center_x, center_y), 5, (0, 255, 0), -1)
             centerpoints.sort(key=lambda x: x[0])
         centerpoints_array = np.array(centerpoints)
-        frame ,_= self.calculate_knee_angle(frame,centerpoints_array)
-        frame ,_=self.calculate_horizontal_angle(frame,centerpoints_array)
-        return frame
+        frame ,kneeangle= self.calculate_knee_angle(frame,centerpoints_array)
+        frame ,femurangle = self.calculate_horizontal_angle(frame,centerpoints_array)
+        return frame,femurangle,kneeangle
+    def squat_counter(self,femur_angle,BOTTOM_THRESHOLD,TOP_THRESHOLD):
+        
+        if femur_angle is not None:
+            if int(femur_angle) < int(BOTTOM_THRESHOLD) and not self.is_squatingis_squatting:
+                self.is_squatting = True
+
+            elif int(femur_angle) > int(TOP_THRESHOLD)and self.is_squatting:
+                self.is_squatting = False
+                squat_count += 1
+                winsound.Beep(1000, 500)    
+                return squat_count
