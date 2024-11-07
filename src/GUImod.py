@@ -1,6 +1,6 @@
 import tkinter as tk
 from camera import CameraModule
-from measurement import MeasurementModule
+import measurement
 from PIL import Image, ImageTk
 import cv2
 
@@ -8,14 +8,16 @@ class GUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Camera vs Measurement")
-        self.root.geometry("640x620")  # Adjusted to make space for elements in measurement mode
+        self.root.geometry("640x620")
 
         self.camera_module = CameraModule()
-        self.measurement_module = MeasurementModule()
 
         self.camera_mode = False
         self.measurement_mode = False
         self.squat_count = 0  # Initialize squat count
+        self.femur_angle = 0
+        self.knee_angle = 0
+        self.frame = 0
 
         # Tkinter label to show the frames
         self.label = tk.Label(self.root)
@@ -78,7 +80,7 @@ class GUI:
         self.update_button_colors()
 
     def reset_squat_count(self):
-        self.measurement_module.squat_count=0
+        self.squat_count=0
         self.squat_count_label.config(text=f"Squat Count: {self.squat_count}")
 
     def update_button_colors(self):
@@ -94,19 +96,19 @@ class GUI:
 
     def update_frame(self):
         if self.camera_mode:
-            frame = self.camera_module.get_frame()
-            if frame is not None:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            self.frame = self.camera_module.get_frame()
+            if self.frame is not None:
+                frame_rgb = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
                 frame_image = ImageTk.PhotoImage(image=Image.fromarray(frame_rgb))
                 self.label.config(image=frame_image)
                 self.label.image = frame_image
         elif self.measurement_mode:
-            frame, femur_angle, knee_angle = self.measurement_module.create_measurement_frame(self.camera_module.get_frame())
-            self.squat_count = self.measurement_module.squat_counter(femur_angle, 0, 25, self.squatsound.get())
-            self.squat_count_label.config(text=f"Squat Count: {self.squat_count}")  # Update squat count label
+            self.frame, femur_angle, knee_angle = measurement.create_measurement_frame(self.camera_module.get_frame())
+            self.squat_count = measurement.squat_counter(self.squat_count,femur_angle,0, 25, self.squatsound.get())
+            self.squat_count_label.config(text=f"Squat Count: {self.squat_count}")
 
-            if frame is not None:
-                frame_image = ImageTk.PhotoImage(image=Image.fromarray(frame))
+            if self.frame is not None:
+                frame_image = ImageTk.PhotoImage(image=Image.fromarray(self.frame))
                 self.label.config(image=frame_image)
                 self.label.image = frame_image
         else:
