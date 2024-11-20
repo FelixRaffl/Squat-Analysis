@@ -35,6 +35,58 @@ def calculate_knee_angle(frame, centerpoints):
 
     return frame, angle_degrees
 
+def measure_handlebar_height(frame, centerpoints, corners, marker_size_cm=8):
+
+    ankle_coords = None
+    handlebar_coords = None
+    pixel_to_cm_ratio = None
+
+    # Calculate the pixel-to-cm ratio from the detected marker corners
+    if corners is not None and len(corners) > 0:
+        for marker_corners in corners:
+            # Calculate the diagonal of the first marker's bounding box
+            top_left = marker_corners[0][0]
+            bottom_right = marker_corners[0][2]
+            marker_pixel_size = np.linalg.norm(np.array(top_left) - np.array(bottom_right))
+            pixel_to_cm_ratio = marker_size_cm / marker_pixel_size
+            break  # Use the first detected marker for ratio calculation
+
+    # Find the coordinates of the ankle (marker ID 123) and handlebar (marker ID 343)
+    for marker in centerpoints:
+        marker_id, x, y = marker
+        if marker_id == 123:  # Replace 123 with the ID of the ankle marker
+            ankle_coords = (x, y)
+        elif marker_id == 343:  # Replace 343 with the ID of the handlebar marker
+            handlebar_coords = (x, y)
+
+    # Check if both markers were found
+    if ankle_coords is None or handlebar_coords is None:
+        return frame, None  # Return the frame unchanged and indicate no height
+
+    # Project the handlebar marker onto the vertical line through the ankle marker
+    x_ankle, y_ankle = ankle_coords
+    x_handlebar, y_handlebar = handlebar_coords
+    x_projection = x_ankle  # Vertical line through the ankle
+    y_projection = y_handlebar
+
+    # Draw orthogonal lines for visualization
+    cv2.line(frame, (x_handlebar, y_handlebar), (x_projection, y_projection), (255, 0, 255), 2)  # Horizontal
+    cv2.line(frame, (x_projection, y_projection), (x_ankle, y_ankle), (0, 255, 0), 2)  # Vertical
+
+    # Calculate the vertical height in pixels
+    height_pixels = abs(y_ankle - y_projection)
+
+    # Convert pixels to centimeters
+    height_cm = height_pixels * pixel_to_cm_ratio if pixel_to_cm_ratio else None
+
+    # Display the height in cm on the frame
+    height_text = f"Height: {int(height_cm)} cm" if height_cm else "Height: N/A"
+    cv2.putText(frame, height_text, (x_projection, y_projection - 10), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+    return frame, height_cm
+
+
 def calculate_horizontal_angle(frame, centerpoints):
     coords_1 = None
     coords_12 = None
@@ -70,12 +122,14 @@ def calculate_horizontal_angle(frame, centerpoints):
 def create_measurement_frame(frame):
     if frame is None:
         return None
+    
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_1000)
     parameters = cv2.aruco.DetectorParameters()
     detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
     corners, ids, rejected = detector.detectMarkers(gray)
-    centerpoints =[]
+
+    centerpoints = []
     if ids is not None:
         for i, marker_corners in enumerate(corners):
             marker_center = np.mean(marker_corners[0], axis=0)
@@ -83,11 +137,19 @@ def create_measurement_frame(frame):
             marker_id = ids[i][0]
             centerpoints.append([marker_id, center_x, center_y])
             cv2.circle(frame, (center_x, center_y), 5, (0, 255, 0), -1)
+
+        # Sort by marker ID
         centerpoints.sort(key=lambda x: x[0])
-    centerpoints_array = np.array(centerpoints)
-    frame, knee_angle = calculate_knee_angle(frame, centerpoints_array)
-    frame, femur_angle = calculate_horizontal_angle(frame, centerpoints_array)
-    return frame, femur_angle, knee_angle
+
+    # Measure handlebar height
+    frame, handlebar_height = measure_handlebar_height(frame, centerpoints, corners)
+    
+    # Calculate angles (optional, from your existing functions)
+    frame, knee_angle = calculate_knee_angle(frame, centerpoints)
+    frame, femur_angle = calculate_horizontal_angle(frame, centerpoints)
+
+    return frame, femur_angle, knee_angle, handlebar_height
+
 
 def squat_counter(squat_count, femur_angle, BOTTOM_THRESHOLD, TOP_THRESHOLD, squatsound):
     global flag

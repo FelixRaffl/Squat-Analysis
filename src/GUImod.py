@@ -27,16 +27,20 @@ class GUI:
 
         # Squat count label
         self.squat_count_label = tk.Label(self.root, text="Squat Count: 0", font=("Helvetica", 14))
-        self.squat_count_label.grid(row=2, column=4, pady=5)
+        self.squat_count_label.grid(row=3, column=4, pady=5)
+
+        # Handlebar height label (new)
+        self.handlebar_label = tk.Label(self.root, text="Handlebar Height: N/A", font=("Helvetica", 14))
+        self.handlebar_label.grid(row=2, column=4, pady=5)
 
         # Checkbox for enabling/disabling squat sound
         self.squatsound = tk.BooleanVar(value=True)
         self.squatsound_checkbox = tk.Checkbutton(self.root, text="Toggle Squat Sound", variable=self.squatsound)
-        self.squatsound_checkbox.grid(row=3, column=4, pady=5)
+        self.squatsound_checkbox.grid(row=4, column=4, pady=5)
 
         # Reset button for squat count
         self.reset_button = tk.Button(self.root, text="Reset Squat Count", command=self.reset_squat_count)
-        self.reset_button.grid(row=4, column=4, pady=5)
+        self.reset_button.grid(row=5, column=4, pady=5)
 
         # Camera and measurement buttons
         self.camera_button = tk.Button(self.root, text="Toggle Camera", command=self.toggle_camera)
@@ -81,6 +85,7 @@ class GUI:
             self.measurement_mode = False
             self.camera_module.stop_camera()
             self.squat_count_label.grid_remove()
+            self.handlebar_label.grid_remove()
             self.squatsound_checkbox.grid_remove()
             self.reset_button.grid_remove()
         else:
@@ -89,6 +94,7 @@ class GUI:
             self.measurement_mode = True
             self.camera_module.start_camera()
             self.squat_count_label.grid()
+            self.handlebar_label.grid()
             self.squatsound_checkbox.grid(pady=5)
             self.reset_button.grid(pady=5)
         self.update_button_colors()
@@ -117,9 +123,13 @@ class GUI:
                 self.label.config(image=frame_image)
                 self.label.image = frame_image
         elif self.measurement_mode:
-            self.frame, femur_angle, knee_angle = measurement.create_measurement_frame(self.camera_module.get_frame())
+            self.frame, femur_angle, knee_angle, handlebar_height = measurement.create_measurement_frame(
+                self.camera_module.get_frame())
             self.squat_count = measurement.squat_counter(self.squat_count, femur_angle, 0, 25, self.squatsound.get())
             self.squat_count_label.config(text=f"Squat Count: {self.squat_count}")
+
+            if handlebar_height is not None:
+                self.handlebar_label.config(text=f"Handlebar Height: {handlebar_height} cm")
 
             if self.frame is not None:
                 frame_image = ImageTk.PhotoImage(image=Image.fromarray(self.frame))
