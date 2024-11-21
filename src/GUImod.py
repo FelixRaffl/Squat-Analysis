@@ -11,25 +11,21 @@ class GUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Camera vs Measurement")
-        self.root.geometry("1600x780")  # Updated to accommodate camera frame + live plot
+        self.root.geometry("1600x780")  # Adjusted to fit two graphs
 
         self.camera_module = CameraModule()
         self.camera_mode = False
         self.measurement_mode = False
         self.squat_count = 0
-        self.femur_angle = 0
-        self.knee_angle = 0
         self.frame = 0
 
         # Tkinter label to show the camera frames
         self.label = tk.Label(self.root)
-        self.label.grid(row=1, column=0, rowspan=2, padx=10)
+        self.label.grid(row=0, column=0, rowspan=2, padx=10)
 
-        # Squat count label
+        # Squat count and handlebar height labels
         self.squat_count_label = tk.Label(self.root, text="Squat Count: 0", font=("Helvetica", 14))
         self.squat_count_label.grid(row=3, column=4, pady=5)
-
-        # Handlebar height label (new)
         self.handlebar_label = tk.Label(self.root, text="Handlebar Height: N/A", font=("Helvetica", 14))
         self.handlebar_label.grid(row=2, column=4, pady=5)
 
@@ -44,26 +40,39 @@ class GUI:
 
         # Camera and measurement buttons
         self.camera_button = tk.Button(self.root, text="Toggle Camera", command=self.toggle_camera)
-        self.camera_button.grid(row=3, column=0, padx=5)
+        self.camera_button.grid(row=2, column=0, padx=5)
         self.measurement_button = tk.Button(self.root, text="Toggle Measurement", command=self.toggle_measurement)
-        self.measurement_button.grid(row=4, column=0, padx=5)
+        self.measurement_button.grid(row=3, column=0, padx=5)
 
         # Matplotlib figure for live knee and femur angle plot
-        self.fig = Figure(figsize=(5, 5), dpi=100)
-        self.ax = self.fig.add_subplot(111)
-        self.ax.set_title("Live Knee and Femur Angles (last 10 seconds)")
-        self.ax.set_ylim(0, 180)  # Angle range for both angles
-        self.ax.set_xlabel("Time (s)")
-        self.ax.set_ylabel("Angle (°)")
-        
-        # Initialize lists to store time, knee, and femur angle data
+        self.fig_angles = Figure(figsize=(5, 2.5), dpi=100)
+        self.ax_angles = self.fig_angles.add_subplot(111)
+        self.ax_angles.set_title("Live Knee and Femur Angles (last 10 seconds)")
+        self.ax_angles.set_ylim(0, 180)
+        self.ax_angles.set_xticks(range(0, 11, 1))
+        self.ax_angles.set_xlabel("Time (s)")
+        self.ax_angles.set_ylabel("Angle (°)")
+
+        # Matplotlib figure for live handlebar height plot
+        self.fig_handlebar = Figure(figsize=(5, 2.5), dpi=100)
+        self.ax_handlebar = self.fig_handlebar.add_subplot(111)
+        self.ax_handlebar.set_title("Live Handlebar Height (last 10 seconds)")
+        self.ax_handlebar.set_ylim(0, 100)  # Adjust based on expected height range
+        self.ax_handlebar.set_xticks(range(0, 11, 1))
+        self.ax_handlebar.set_xlabel("Time (s)")
+        self.ax_handlebar.set_ylabel("Height (cm)")
+
+        # Initialize lists to store time, knee, femur, and handlebar height data
         self.time_data = []
         self.knee_angle_data = []
         self.femur_angle_data = []
+        self.handlebar_height_data = []
 
-        # Matplotlib canvas for embedding the plot in Tkinter
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
-        self.canvas.get_tk_widget().grid(row=0, column=4, rowspan=2, padx=10)
+        # Matplotlib canvases for embedding the plots in Tkinter
+        self.canvas_angles = FigureCanvasTkAgg(self.fig_angles, master=self.root)
+        self.canvas_angles.get_tk_widget().grid(row=0, column=4, padx=10)
+        self.canvas_handlebar = FigureCanvasTkAgg(self.fig_handlebar, master=self.root)
+        self.canvas_handlebar.get_tk_widget().grid(row=1, column=4, padx=10)
 
         # Update buttons and start the frame update loop
         self.update_button_colors()
@@ -84,19 +93,11 @@ class GUI:
         if self.measurement_mode:
             self.measurement_mode = False
             self.camera_module.stop_camera()
-            self.squat_count_label.grid_remove()
-            self.handlebar_label.grid_remove()
-            self.squatsound_checkbox.grid_remove()
-            self.reset_button.grid_remove()
         else:
             if self.camera_mode:
                 self.toggle_camera()
             self.measurement_mode = True
             self.camera_module.start_camera()
-            self.squat_count_label.grid()
-            self.handlebar_label.grid()
-            self.squatsound_checkbox.grid(pady=5)
-            self.reset_button.grid(pady=5)
         self.update_button_colors()
 
     def reset_squat_count(self):
@@ -129,43 +130,49 @@ class GUI:
             self.squat_count_label.config(text=f"Squat Count: {self.squat_count}")
 
             if handlebar_height is not None:
-                self.handlebar_label.config(text=f"Handlebar Height: {handlebar_height} cm")
+                self.handlebar_label.config(text=f"Handlebar Height: {handlebar_height:.2f} cm")
 
             if self.frame is not None:
                 frame_image = ImageTk.PhotoImage(image=Image.fromarray(self.frame))
                 self.label.config(image=frame_image)
                 self.label.image = frame_image
 
-            if knee_angle is not None and femur_angle is not None:
-                # Append data for live plot
+            # Append data for live plot
+            if knee_angle is not None and femur_angle is not None and handlebar_height is not None:
                 current_time = time.time()
                 self.time_data.append(current_time)
                 self.knee_angle_data.append(knee_angle)
                 self.femur_angle_data.append(femur_angle)
+                self.handlebar_height_data.append(handlebar_height)
 
                 # Remove old data beyond 10 seconds
                 while self.time_data and current_time - self.time_data[0] > 10:
                     self.time_data.pop(0)
                     self.knee_angle_data.pop(0)
                     self.femur_angle_data.pop(0)
+                    self.handlebar_height_data.pop(0)
 
-                # Update plot
-                self.ax.clear()
-                self.ax.set_title("Live Knee and Femur Angles (last 10 seconds)")
-                self.ax.set_ylim(0, 180)
-                self.ax.set_xlabel("Time (s)")
-                self.ax.set_ylabel("Angle (°)")
-
-                # Adjust time for x-axis
+                # Update knee and femur angle plot
+                self.ax_angles.clear()
+                self.ax_angles.set_title("Live Knee and Femur Angles (last 10 seconds)")
+                self.ax_angles.set_ylim(0, 180)
+                self.ax_angles.set_xlabel("Time (s)")
+                self.ax_angles.set_ylabel("Angle (°)")
                 times = [t - self.time_data[0] for t in self.time_data]
-                self.ax.plot(times, self.knee_angle_data, label="Knee Angle", color='blue')
-                self.ax.plot(times, self.femur_angle_data, label="Femur Angle", color='orange')
-                self.ax.legend()
+                self.ax_angles.plot(times, self.knee_angle_data, label="Knee Angle", color='blue')
+                self.ax_angles.plot(times, self.femur_angle_data, label="Femur Angle", color='orange')
+                self.ax_angles.legend()
+                self.canvas_angles.draw()
 
-                # Draw the canvas
-                self.canvas.draw()
-
-        # Placeholder if neither mode is active
+                # Update handlebar height plot
+                self.ax_handlebar.clear()
+                self.ax_handlebar.set_title("Live Handlebar Height (last 10 seconds)")
+                self.ax_handlebar.set_ylim(0, 100)
+                self.ax_handlebar.set_xlabel("Time (s)")
+                self.ax_handlebar.set_ylabel("Height (cm)")
+                self.ax_handlebar.plot(times, self.handlebar_height_data, label="Handlebar Height", color='green')
+                self.ax_handlebar.legend()
+                self.canvas_handlebar.draw()
         else:
             placeholder = self.create_placeholder_frame(640, 480)
             self.label.config(image=placeholder)

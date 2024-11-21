@@ -6,36 +6,49 @@ import winsound
 # Define the flag as a global variable outside the function
 flag = False
 
-def calculate_knee_angle(frame, centerpoints):
-    if len(centerpoints) < 3:
+
+def calculate_knee_angle(frame, marker1, marker12, marker123):
+    # Validate inputs
+    if not (isinstance(marker1, (list, tuple)) and len(marker1) == 2):
         return frame, None
-    
-    x1, y1 = centerpoints[0][1], centerpoints[0][2]
-    x2, y2 = centerpoints[1][1], centerpoints[1][2]
-    x3, y3 = centerpoints[2][1], centerpoints[2][2]
-    
-    # Create vectors from the centerpoints
-    vector1 = np.array([x1 - x2, y1 - y2])
-    vector2 = np.array([x3 - x2, y3 - y2])
+    if not (isinstance(marker12, (list, tuple)) and len(marker12) == 2):
+        return frame, None
+    if not (isinstance(marker123, (list, tuple)) and len(marker123) == 2):
+        return frame, None
+
+    # Unpack coordinates
+    x1, y1 = marker1
+    x12, y12 = marker12
+    x123, y123 = marker123
+
+    # Create vectors from the center points
+    vector1 = np.array([x1 - x12, y1 - y12])
+    vector2 = np.array([x123 - x12, y123 - y12])
 
     # Calculate the angle between the vectors using the dot product
     dot_product = np.dot(vector1, vector2)
     magnitude1 = np.linalg.norm(vector1)
     magnitude2 = np.linalg.norm(vector2)
+
+    # Prevent division by zero
+    if magnitude1 == 0 or magnitude2 == 0:
+        print("Error: One or both vectors have zero magnitude.")
+        return frame, None
+
     angle_radians = np.arccos(dot_product / (magnitude1 * magnitude2))
     angle_degrees = np.degrees(angle_radians)
 
-    # Draw lines between the centerpoints to visualize the vectors
-    cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Line from 1 to 2
-    cv2.line(frame, (x3, y3), (x2, y2), (255, 0, 0), 2)  # Line from 3 to 2
+    # Draw lines between the center points to visualize the vectors
+    cv2.line(frame, (x1, y1), (x12, y12), (255, 0, 0), 2)  # Line from 1 to 2
+    cv2.line(frame, (x123, y123), (x12, y12), (255, 0, 0), 2)  # Line from 3 to 2
 
     # Display the calculated angle on the image
     angle_text = f"{int(angle_degrees)} degrees"
-    cv2.putText(frame, angle_text, (x2, y2 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+    cv2.putText(frame, angle_text, (x12, y12 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
     return frame, angle_degrees
 
-def measure_handlebar_height(frame, centerpoints, corners, marker_size_cm=8):
+def measure_handlebar_height(frame, marker123, marker2, corners, marker_size_cm=8):
 
     ankle_coords = None
     handlebar_coords = None
@@ -50,16 +63,19 @@ def measure_handlebar_height(frame, centerpoints, corners, marker_size_cm=8):
             marker_pixel_size = np.linalg.norm(np.array(top_left) - np.array(bottom_right))
             pixel_to_cm_ratio = marker_size_cm / marker_pixel_size
             break  # Use the first detected marker for ratio calculation
+    
+    # Validate and assign coordinates
+    if isinstance(marker123, (list, tuple)) and len(marker123) == 2:
+        ankle_coords = marker123
+    else:
+        print(f"Invalid ankle_coords: {marker123}")
+    
+    if isinstance(marker2, (list, tuple)) and len(marker2) == 2:
+        handlebar_coords = marker2
+    else:
+        print(f"Invalid handlebar_coords: {marker2}")
 
-    # Find the coordinates of the ankle (marker ID 123) and handlebar (marker ID 343)
-    for marker in centerpoints:
-        marker_id, x, y = marker
-        if marker_id == 123:  # Replace 123 with the ID of the ankle marker
-            ankle_coords = (x, y)
-        elif marker_id == 343:  # Replace 343 with the ID of the handlebar marker
-            handlebar_coords = (x, y)
-
-    # Check if both markers were found
+    # Check if both markers were found and are valid
     if ankle_coords is None or handlebar_coords is None:
         return frame, None  # Return the frame unchanged and indicate no height
 
@@ -79,6 +95,9 @@ def measure_handlebar_height(frame, centerpoints, corners, marker_size_cm=8):
     # Convert pixels to centimeters
     height_cm = height_pixels * pixel_to_cm_ratio if pixel_to_cm_ratio else None
 
+    # Round the height to the nearest integer
+    height_cm = round(height_cm) if height_cm else None
+
     # Display the height in cm on the frame
     height_text = f"Height: {int(height_cm)} cm" if height_cm else "Height: N/A"
     cv2.putText(frame, height_text, (x_projection, y_projection - 10), 
@@ -87,41 +106,45 @@ def measure_handlebar_height(frame, centerpoints, corners, marker_size_cm=8):
     return frame, height_cm
 
 
-def calculate_horizontal_angle(frame, centerpoints):
-    coords_1 = None
-    coords_12 = None
 
-    # Find the coordinates of markers with ID 1 and 12
-    for marker in centerpoints:
-        marker_id = marker[0]
-        if marker_id == 1:
-            coords_1 = (marker[1], marker[2])  # (x, y) for marker 1
-        elif marker_id == 12:
-            coords_12 = (marker[1], marker[2])  # (x, y) for marker 12
+def calculate_horizontal_angle(frame, marker1, marker12):
+    # Validate the inputs
+    if not (isinstance(marker1, (list, tuple)) and len(marker1) == 2):
+        print(f"Invalid marker1: {marker1}")
+        return frame, None
+    if not (isinstance(marker12, (list, tuple)) and len(marker12) == 2):
+        print(f"Invalid marker12: {marker12}")
+        return frame, None
 
-    # Check if both markers were found
-    if coords_1 is None or coords_12 is None:
-        return frame, None  # Return the frame unchanged and indicate no angle
-    
+    # Assign validated coordinates
+    coords_1 = marker1
+    coords_12 = marker12
+
+    # Unpack coordinates
     x1, y1 = coords_1
     x12, y12 = coords_12
-    
-    # Create the vector from marker 1 to marker 12
+
+    # Create the vector from marker12 to marker123
     vector = np.array([x12 - x1, y12 - y1])
-    
+
     # Calculate the angle with respect to the horizontal (x-axis)
     angle_radians = np.arctan2(vector[1], vector[0])
     angle_degrees = np.degrees(angle_radians)
-        
+
     # Display the calculated angle on the image
     angle_text = f"Angle: {int(angle_degrees)} degrees"
     cv2.putText(frame, angle_text, (x12, y12), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
     return frame, angle_degrees
 
+
 def create_measurement_frame(frame):
     if frame is None:
         return None
+    marker1 = 0
+    marker12= 0
+    marker123= 0
+    marker2= 0
     
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_1000)
@@ -129,24 +152,27 @@ def create_measurement_frame(frame):
     detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
     corners, ids, rejected = detector.detectMarkers(gray)
 
-    centerpoints = []
     if ids is not None:
         for i, marker_corners in enumerate(corners):
             marker_center = np.mean(marker_corners[0], axis=0)
             center_x, center_y = int(marker_center[0]), int(marker_center[1])
             marker_id = ids[i][0]
-            centerpoints.append([marker_id, center_x, center_y])
             cv2.circle(frame, (center_x, center_y), 5, (0, 255, 0), -1)
+            if(marker_id == 1):
+                marker1 = center_x,center_y
+            elif(marker_id == 12):
+                marker12 = center_x,center_y
+            elif(marker_id == 123):
+                marker123 = center_x,center_y
+            elif(marker_id == 2):
+                marker2 = center_x,center_y
 
-        # Sort by marker ID
-        centerpoints.sort(key=lambda x: x[0])
 
     # Measure handlebar height
-    frame, handlebar_height = measure_handlebar_height(frame, centerpoints, corners)
-    
+    frame, handlebar_height = measure_handlebar_height(frame, marker123,marker2, corners)
     # Calculate angles (optional, from your existing functions)
-    frame, knee_angle = calculate_knee_angle(frame, centerpoints)
-    frame, femur_angle = calculate_horizontal_angle(frame, centerpoints)
+    frame, knee_angle = calculate_knee_angle(frame, marker1,marker12,marker123)
+    frame, femur_angle = calculate_horizontal_angle(frame, marker1,marker12)
 
     return frame, femur_angle, knee_angle, handlebar_height
 
