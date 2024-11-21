@@ -10,12 +10,11 @@ import time
 class GUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Camera vs Measurement")
-        self.root.geometry("1600x780")  # Adjusted to fit two graphs
-
+        self.root.title("Squat Analyzing Tool")
+        self.root.geometry("1600x780")
         self.camera_module = CameraModule()
-        self.camera_mode = False
-        self.measurement_mode = False
+        self.camera_mode = False # is camera mode on or not
+        self.measurement_mode = False #is measurement mode on or not
         self.squat_count = 0
         self.frame = 0
 
@@ -77,7 +76,9 @@ class GUI:
         # Update buttons and start the frame update loop
         self.update_button_colors()
         self.update_frame()
-
+    #camera on or of, if camera is on and button is pressed camera gets turned off, 
+    #if camera is off and measurement mode is on and button is pressed measurement mode gets turned off and camera on
+    #if camera is off and button is pressed 
     def toggle_camera(self):
         if self.camera_mode:
             self.camera_module.stop_camera()
@@ -88,7 +89,7 @@ class GUI:
             self.camera_module.start_camera()
             self.camera_mode = True
         self.update_button_colors()
-
+    #same as for the camera toggling, only one is on
     def toggle_measurement(self):
         if self.measurement_mode:
             self.measurement_mode = False
@@ -100,10 +101,12 @@ class GUI:
             self.camera_module.start_camera()
         self.update_button_colors()
 
+    #resets the variable squatcount
     def reset_squat_count(self):
         self.squat_count = 0
         self.squat_count_label.config(text=f"Squat Count: {self.squat_count}")
 
+    #makes the buttons change color so that you know if camera mode or measurement mode is active, the active one gets red
     def update_button_colors(self):
         if self.camera_mode:
             self.camera_button.config(bg='red')
@@ -114,7 +117,7 @@ class GUI:
         else:
             self.camera_button.config(bg='grey')
             self.measurement_button.config(bg='grey')
-
+    #when in camera mode ,gets frame from camera if there is no frame then a grey spaceholder is drawn
     def update_frame(self):
         if self.camera_mode:
             self.frame = self.camera_module.get_frame()
@@ -124,16 +127,20 @@ class GUI:
                 self.label.config(image=frame_image)
                 self.label.image = frame_image
         elif self.measurement_mode:
-            self.frame, femur_angle, knee_angle, handlebar_height = measurement.create_measurement_frame(
-                self.camera_module.get_frame())
+            #when in measurement mode frame is given to the method thats does the measurement basically
+            #calculates femur angle knee angle handbar height and the angles are drawn into the frame then it is returned and displayed
+            self.frame, femur_angle, knee_angle, handlebar_height = measurement.create_measurement_frame(self.camera_module.get_frame())
+            #counts the squat, the current value is given as a parameter and the current femur angle then the threshhold angles for what
+            #we count as a correct squat and then the status of the squatsound checkbox is controlled and given to the function 
             self.squat_count = measurement.squat_counter(self.squat_count, femur_angle, 0, 25, self.squatsound.get())
             self.squat_count_label.config(text=f"Squat Count: {self.squat_count}")
 
             if handlebar_height is not None:
                 self.handlebar_label.config(text=f"Handlebar Height: {handlebar_height:.2f} cm")
-
+            #displays the created frame
             if self.frame is not None:
-                frame_image = ImageTk.PhotoImage(image=Image.fromarray(self.frame))
+                frame_rgb = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+                frame_image = ImageTk.PhotoImage(image=Image.fromarray(frame_rgb))
                 self.label.config(image=frame_image)
                 self.label.image = frame_image
 

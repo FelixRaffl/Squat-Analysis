@@ -15,12 +15,15 @@ def calculate_knee_angle(frame, marker1, marker12, marker123):
         return frame, None
     if not (isinstance(marker123, (list, tuple)) and len(marker123) == 2):
         return frame, None
-
-    # Unpack coordinates
+    #coordinates of the markes -> variables
     x1, y1 = marker1
     x12, y12 = marker12
     x123, y123 = marker123
 
+
+    #This code calculates the angle between two vectors (vector1 and vector2) originating from a common point. 
+    # It uses the dot product formula to find the cosine of the angle, converts it from radians to degrees, and ensures 
+    # no division by zero by checking the vector magnitudes.
     # Create vectors from the center points
     vector1 = np.array([x1 - x12, y1 - y12])
     vector2 = np.array([x123 - x12, y123 - y12])
@@ -67,13 +70,8 @@ def measure_handlebar_height(frame, marker123, marker2, corners, marker_size_cm=
     # Validate and assign coordinates
     if isinstance(marker123, (list, tuple)) and len(marker123) == 2:
         ankle_coords = marker123
-    else:
-        print(f"Invalid ankle_coords: {marker123}")
-    
     if isinstance(marker2, (list, tuple)) and len(marker2) == 2:
         handlebar_coords = marker2
-    else:
-        print(f"Invalid handlebar_coords: {marker2}")
 
     # Check if both markers were found and are valid
     if ankle_coords is None or handlebar_coords is None:
@@ -110,10 +108,8 @@ def measure_handlebar_height(frame, marker123, marker2, corners, marker_size_cm=
 def calculate_horizontal_angle(frame, marker1, marker12):
     # Validate the inputs
     if not (isinstance(marker1, (list, tuple)) and len(marker1) == 2):
-        print(f"Invalid marker1: {marker1}")
         return frame, None
     if not (isinstance(marker12, (list, tuple)) and len(marker12) == 2):
-        print(f"Invalid marker12: {marker12}")
         return frame, None
 
     # Assign validated coordinates
